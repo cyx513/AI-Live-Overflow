@@ -9,6 +9,8 @@ jobs:
         with:
           java-version: 17
           distribution: temurin
+      - name: Grant execute permission
+        run: chmod +x gradlew
       - run: ./gradlew assembleRelease
       - uses: actions/upload-artifact@v4
         with:
