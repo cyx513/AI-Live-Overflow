@@ -9,9 +9,8 @@ jobs:
         with:
           java-version: 17
           distribution: temurin
-      - uses: gradle/gradle-build-action@v3
-        with:
-          arguments: assembleRelease
+      - uses: gradle/actions/setup-gradle@v3
+      - run: gradle assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: apk
