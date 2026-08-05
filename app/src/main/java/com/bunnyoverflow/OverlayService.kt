@@ -24,6 +24,11 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
+import android.os.FileObserver
+import android.os.Environment
+import java.io.File
 
 class OverlayService : Service() {
 
@@ -47,6 +52,8 @@ class OverlayService : Service() {
         setupWebView()
         startPolling()
         startWhisperRotation()
+        startScreenshotObserver()
+        startAppTracking()
     }
 
     private fun setupWebView() {
