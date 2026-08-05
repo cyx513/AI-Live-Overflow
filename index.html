@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>小比格 · 兔毛手袋</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+  }
+  .stats {
+    display: flex;
+    gap: 24px;
+    color: #ccc;
+    font-size: 14px;
+    background: #16213e;
+    padding: 12px 24px;
+    border-radius: 20px;
+    border: 1px solid #0f3460;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .stat-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 18px; font-weight: bold; color: #e94560; }
+  .stat-bar {
+    width: 60px; height: 4px; background: #333; border-radius: 2px; overflow: hidden;
+  }
+  .stat-bar-fill {
+    height: 100%; border-radius: 2px; transition: width 0.5s ease;
+  }
+  .hunger-fill { background: #e94560; }
+  .mood-fill { background: #f5c518; }
+
+  .pet-area {
+    width: 280px;
+    height: 320px;
+    background: radial-gradient(ellipse at center, #2a2a4a 0%, #1a1a2e 70%);
+    border-radius: 40px;
+    border: 2px solid #0f3460;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.3s;
+  }
+  .pet-area:active { border-color: #e94560; }
+
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .speech-bubble {
+    position: absolute;
+    top: -50px;
+    background: #fff;
+    color: #1a1a2e;
+    padding: 8px 16px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: bold;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    font-family: sans-serif;
+  }
+  .speech-bubble.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #fff;
+  }
+
+  .actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: sans-serif;
+    letter-spacing: 0.5px;
+  }
+  button:active { transform: scale(0.95); }
+  .btn-feed {
+    background: #e94560;
+    color: #fff;
+  }
+  .btn-feed:hover { background: #c73a50; }
+  .btn-pet {
+    background: #f5c518;
+    color: #1a1a2e;
+  }
+  .btn-pet:hover { background: #d4a914; }
+  .btn-toy {
+    background: #0f3460;
+    color: #fff;
+    border: 1px solid #1a508b;
+  }
+
+  .log {
+    color: #666;
+    font-size: 11px;
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.6;
+    font-family: sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">饱食度</span>
+      <span class="stat-value" id="hungerVal">80</span>
+      <div class="stat-bar"><div class="stat-bar-fill hunger-fill" id="hungerBar" style="width:80%"></div></div>
+    </div>
+    <div class="stat">
+      <span class="stat-label">心情</span>
+      <span class="stat-value" id="moodVal">70</span>
+      <div class="stat-bar"><div class="stat-bar-fill mood-fill" id="moodBar" style="width:70%"></div></div>
+    </div>
+  </div>
+
+  <div class="pet-area" id="petArea">
+    <div class="speech-bubble" id="speech"></div>
+    <canvas id="petCanvas" width="200" height="240"></canvas>
+  </div>
+
+  <div class="actions">
+    <button class="btn-feed" onclick="feed()">🍖 喂食</button>
+    <button class="btn-pet" onclick="pet()">✋ 摸摸头</button>
+    <button class="btn-toy" onclick="playToy()">🎾 玩球</button>
+  </div>
+  <div class="log" id="log">汪！我是兔毛手袋，别饿着我。</div>
+</div>
+
+<script>
+  const canvas = document.getElementById('petCanvas');
+  const ctx = canvas.getContext('2d');
+  const speech = document.getElementById('speech');
+  const logEl = document.getElementById('log');
+
+  let hunger = 80;
+  let mood = 70;
+  let isPetting = false;
+  let isPlaying = false;
+  let petAnimTimer = 0;
+  let tailWag = 0;
+  let earBounce = 0;
+  let bounceOffset = 0;
+
+  const SCALE = 4; // pixel scale
+
+  // 比格犬像素数据：棕身白腹黑鼻垂耳
+  // 简化：直接用 draw 函数绘制像素比格
+  function drawBeagle(ox, oy) {
+    ctx.clearRect(0, 0, 200, 240);
+    const s = SCALE;
+
+    // 阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(ox + 2, oy + 180 + bounceOffset, 96, 12);
+
+    // -- 身体 --
+    // 棕色主体
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(ox + 24, oy + 72, 64, 56);
+    ctx.fillRect(ox + 20, oy + 80, 72, 40);
+    // 白色肚皮
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 32, oy + 96, 48, 28);
+
+    // -- 腿 --
+    ctx.fillStyle = '#f5f0e8';
+    // 前腿
+    ctx.fillRect(ox + 28, oy + 124, 16, 32);
+    ctx.fillRect(ox + 68, oy + 124, 16, 32);
+    // 棕色爪子
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(ox + 28, oy + 148, 16, 8);
+    ctx.fillRect(ox + 68, oy + 148, 16, 8);
+    // 白色后腿
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 16, oy + 120, 16, 28);
+    ctx.fillRect(ox + 80, oy + 120, 16, 28);
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(ox + 16, oy + 144, 16, 8);
+    ctx.fillRect(ox + 80, oy + 144, 16, 8);
+
+    // -- 尾巴 --
+    ctx.fillStyle = '#8B5E3C';
+    const tailY = oy + 64 + Math.sin(tailWag * 0.15) * 4;
+    ctx.fillRect(ox + 80, tailY, 8, 24);
+    // 白色尾尖
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 80, tailY, 8, 8);
+
+    // -- 头 --
+    ctx.fillStyle = '#8B5E3C';
+    const headY = oy + 32 + earBounce;
+    ctx.fillRect(ox + 28, headY, 56, 48);
+
+    // 白色面部斑纹
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 36, headY + 8, 8, 32);
+    ctx.fillRect(ox + 68, headY + 8, 8, 32);
+    ctx.fillRect(ox + 44, headY + 28, 24, 16);
+
+    // -- 垂耳 --
+    ctx.fillStyle = '#6B3F23';
+    const earWag = Math.sin(earBounce * 0.1) * 2;
+    // 左耳
+    ctx.fillRect(ox + 20, headY + earWag, 16, 36);
+    // 右耳
+    ctx.fillRect(ox + 76, headY - earWag, 16, 36);
+
+    // -- 眼睛 --
+    ctx.fillStyle = '#111';
+    ctx.fillRect(ox + 40, headY + 16, 8, 8);
+    ctx.fillRect(ox + 64, headY + 16, 8, 8);
+    // 眼睛高光
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(ox + 44, headY + 16, 4, 4);
+    ctx.fillRect(ox + 68, headY + 16, 4, 4);
+
+    // -- 鼻子 --
+    ctx.fillStyle = '#111';
+    ctx.fillRect(ox + 52, headY + 28, 12, 8);
+    // 鼻子高光
+    ctx.fillStyle = '#444';
+    ctx.fillRect(ox + 56, headY + 28, 4, 4);
+
+    // -- 嘴 --
+    ctx.fillStyle = '#5a3020';
+    ctx.fillRect(ox + 52, headY + 40, 12, 4);
+
+    // -- 项圈 --
+    ctx.fillStyle = '#e94560';
+    ctx.fillRect(ox + 28, headY + 44, 56, 6);
+    // 吊牌
+    ctx.fillStyle = '#f5c518';
+    ctx.fillRect(ox + 52, headY + 50, 8, 8);
+
+    // 被摸时的特效：头顶爱心
+    if (isPetting) {
+      ctx.fillStyle = '#e94560';
+      ctx.fillRect(ox + 44, headY - 16 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 48, headY - 20 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 52, headY - 16 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 56, headY - 20 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 60, headY - 16 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 48, headY - 24 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 52, headY - 24 + petAnimTimer, 4, 4);
+      ctx.fillRect(ox + 56, headY - 24 + petAnimTimer, 4, 4);
+    }
+
+    // 玩球时弹球
+    if (isPlaying) {
+      const ballX = ox + 100 + Math.sin(petAnimTimer * 0.3) * 40;
+      const ballY = oy + 100 + Math.abs(Math.cos(petAnimTimer * 0.3)) * 60;
+      ctx.fillStyle = '#f5c518';
+      ctx.fillRect(ballX, ballY, 12, 12);
+      // 高光
+      ctx.fillStyle = '#ffe680';
+      ctx.fillRect(ballX + 2, ballY + 2, 4, 4);
+    }
+  }
+
+  function updateStats() {
+    document.getElementById('hungerVal').textContent = Math.round(hunger);
+    document.getElementById('moodVal').textContent = Math.round(mood);
+    document.getElementById('hungerBar').style.width = hunger + '%';
+    document.getElementById('moodBar').style.width = mood + '%';
+  }
+
+  function say(text) {
+    speech.textContent = text;
+    speech.classList.add('show');
+    clearTimeout(speech._timeout);
+    speech._timeout = setTimeout(() => speech.classList.remove('show'), 2200);
+  }
+
+  function addLog(text) {
+    logEl.textContent = text;
+  }
+
+  function feed() {
+    if (hunger >= 100) {
+      say('汪……吃不下了！');
+      addLog('太饱了，再喂要撑坏了。');
+      return;
+    }
+    hunger = Math.min(100, hunger + 25);
+    mood = Math.min(100, mood + 5);
+    updateStats();
+    say('嗷呜！好吃！');
+    addLog('你喂了小比格一块肉干，它尾巴摇得飞快。');
+  }
+
+  function pet() {
+    if (isPetting) return;
+    isPetting = true;
+    petAnimTimer = 0;
+    mood = Math.min(100, mood + 15);
+    updateStats();
+
+    const phrases = [
+      '汪汪！再摸一下嘛～',
+      '呼噜呼噜……舒服！',
+      '嘿嘿，别停！',
+      '嗷！你手好软。',
+      '汪！耳朵也要摸！'
+    ];
+    say(phrases[Math.floor(Math.random() * phrases.length)]);
+    addLog('你摸了摸小比格的头，它眯起眼睛蹭你手心。');
+
+    const anim = setInterval(() => {
+      petAnimTimer--;
+      if (petAnimTimer <= -20) {
+        isPetting = false;
+        clearInterval(anim);
+      }
+    }, 80);
+  }
+
+  function playToy() {
+    if (isPlaying) return;
+    isPlaying = true;
+    petAnimTimer = 0;
+    mood = Math.min(100, mood + 10);
+    hunger = Math.max(0, hunger - 5);
+    updateStats();
+
+    const phrases = [
+      '球！球球球球——！！',
+      '汪！扔远点！',
+      '嗷嗷嗷！我的球！',
+      '汪汪汪！接住啦！',
+      '比格永远爱弹力球！！！'
+    ];
+    say(phrases[Math.floor(Math.random() * phrases.length)]);
+    addLog('你扔出了弹力球，比格犬兴奋地追了上去。');
+
+    const anim = setInterval(() => {
+      petAnimTimer++;
+      if (petAnimTimer >= 30) {
+        isPlaying = false;
+        clearInterval(anim);
+      }
+    }, 100);
+  }
+
+  // 摸头区域事件
+  document.getElementById('petArea').addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    // 头部区域
+    if (x > 28*SCALE && x < 84*SCALE && y > 32*SCALE && y < 76*SCALE) {
+      pet();
+    }
+  });
+
+  // 主循环
+  function loop() {
+    tailWag++;
+    earBounce = Math.sin(tailWag * 0.08) * 3;
+    bounceOffset = Math.abs(Math.sin(tailWag * 0.05)) * 2;
+
+    // 随时间缓慢降低
+    if (tailWag % 180 === 0 && !isPetting && !isPlaying) {
+      hunger = Math.max(0, hunger - 1);
+      mood = Math.max(0, mood - 0.5);
+      updateStats();
+    }
+
+    // 饿了会叫
+    if (hunger < 20 && tailWag % 300 === 0 && !isPetting && !isPlaying) {
+      say('汪……好饿……');
+      addLog('小比格饿得趴在地上，可怜巴巴地看着你。');
+    }
+
+    // 心情低落了
+    if (mood < 20 && tailWag % 400 === 0 && !isPetting && !isPlaying) {
+      say('嗷呜……理理我嘛。');
+      addLog('小比格趴着不动，耳朵耷拉下来。');
+    }
+
+    drawBeagle(34, 12);
+    requestAnimationFrame(loop);
+  }
+
+  updateStats();
+  loop();
+</script>
+</body>
+</html>
