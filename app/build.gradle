@@ -5,11 +5,6 @@ plugins {
 android {
     namespace 'com.bunnyoverflow'
     compileSdk 34
-    signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-        }
-    }
     defaultConfig {
         applicationId "com.bunnyoverflow"
         minSdk 26
@@ -20,9 +15,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
-        }
-        debug {
             signingConfig signingConfigs.debug
         }
     }
