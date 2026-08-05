@@ -46,6 +46,7 @@ class OverlayService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         setupWebView()
         startPolling()
+        startWhisperRotation()
     }
 
     private fun setupWebView() {
@@ -181,14 +182,14 @@ class OverlayService : Service() {
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(text: String = "比格犬在你的屏幕上"): Notification {
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, "bunny_overflow")
                 .setContentTitle("🐾 Bunny Overflow")
-                .setContentText("比格犬在你的屏幕上")
+                .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -196,7 +197,7 @@ class OverlayService : Service() {
         } else {
             Notification.Builder(this)
                 .setContentTitle("🐾 Bunny Overflow")
-                .setContentText("比格犬在你的屏幕上")
+                .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -205,6 +206,31 @@ class OverlayService : Service() {
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    // -- Notification Whisper Rotation --
+    private val whispers = arrayOf(
+        "汪！汐在看我呢",
+        "嗷……有点无聊",
+        "汪！什么时候带我散步",
+        "zzz……呼……",
+        "汪！弹力球呢？",
+        "嗷呜……饿了",
+        "汪！有人在戳我",
+        "呼噜呼噜……",
+        "汪！比格犬永不认输",
+        "嗷……想咬点什么"
+    )
+    private var whisperIndex = 0
+    private fun startWhisperRotation() {
+        mainHandler.postDelayed(object : Runnable {
+            override fun run() {
+                whisperIndex = (whisperIndex + 1) % whispers.size
+                val nm = getSystemService(NotificationManager::class.java)
+                nm.notify(1, createNotification(whispers[whisperIndex]))
+                mainHandler.postDelayed(this, 3600_000L) // every hour
+            }
+        }, 3600_000L)
+    }
 
     override fun onDestroy() {
         polling = false
