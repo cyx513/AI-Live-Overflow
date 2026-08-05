@@ -14,16 +14,14 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    font-family: 'Courier New', monospace;
   }
-  #beagle {
-    width: 120px; height: 120px;
+  canvas {
     image-rendering: pixelated;
     transition: transform 0.3s ease;
   }
   #beagle.idle { transform: scale(1); }
   #beagle.blink { animation: blink 0.3s ease; }
-  #beagle.love { transform: scale(1.2); }
+  #beagle.love { transform: scale(1.15); }
   #beagle.angry { animation: shake 0.5s ease; }
   #beagle.talk { animation: bounce 0.6s ease; }
   #beagle.follow { transform: scale(1.05) rotate(-5deg); }
@@ -32,13 +30,14 @@
     background: rgba(255,255,255,0.92);
     border-radius: 14px;
     padding: 6px 12px;
-    margin-top: 4px;
+    margin-top: 2px;
     font-size: 12px;
     color: #555;
     text-align: center;
     display: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     word-break: break-word;
+    font-family: sans-serif;
   }
   #bubble.show { display: block; }
   #bubble.love-bubble { background: #ffe0ec; color: #d6336c; }
@@ -59,120 +58,141 @@
 </style>
 </head>
 <body>
-<canvas id="beagle" class="idle" width="40" height="40"></canvas>
+<canvas id="beagle" class="idle" width="120" height="160"></canvas>
 <div id="bubble"></div>
 <script>
-  // Pixel beagle - 40x40 canvas
   const canvas = document.getElementById('beagle');
   const ctx = canvas.getContext('2d');
-  const P = 2; // pixel size
-  
-  function drawBeagle(expr) {
-    ctx.clearRect(0, 0, 40, 40);
-    ctx.imageSmoothingEnabled = false;
-    
-    // Body (brown)
+  const S = 4; // pixel scale
+  let tailWag = 0;
+  let earBounce = 0;
+  let bounceOffset = 0;
+  let isLove = false;
+  let isAngry = false;
+  let loveTimer = 0;
+
+  function drawBeagle(ox, oy) {
+    ctx.clearRect(0, 0, 120, 160);
+    const s = S;
+
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(ox + 2, oy + 120 + bounceOffset, 76, 8);
+
+    // -- body --
     ctx.fillStyle = '#8B5E3C';
-    for (let [x,y] of [[6,22],[8,22],[10,22],[12,22],[14,22],[16,22],[18,22],[20,22],[22,22],[24,22],[26,22],[28,22],[30,22],[32,22],[6,24],[8,24],[10,24],[12,24],[14,24],[16,24],[18,24],[20,24],[22,24],[24,24],[26,24],[28,24],[30,24],[32,24],[8,26],[10,26],[12,26],[14,26],[16,26],[18,26],[20,26],[22,26],[24,26],[26,26],[28,26],[30,26],[10,28],[12,28],[14,28],[16,28],[18,28],[20,28],[22,28],[24,28],[26,28],[28,28]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // White belly
-    ctx.fillStyle = '#F5E6D3';
-    for (let [x,y] of [[14,24],[16,24],[18,24],[20,24],[22,24],[24,24],[14,26],[16,26],[18,26],[20,26],[22,26],[24,26]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // Head (brown)
+    ctx.fillRect(ox + 12, oy + 52, 52, 44);
+    ctx.fillRect(ox + 8, oy + 60, 60, 32);
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 20, oy + 72, 40, 20);
+
+    // -- legs --
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 16, oy + 92, 12, 28);
+    ctx.fillRect(ox + 52, oy + 92, 12, 28);
     ctx.fillStyle = '#8B5E3C';
-    for (let [x,y] of [[12,10],[14,10],[16,10],[18,10],[20,10],[22,10],[24,10],[26,10],[10,12],[12,12],[14,12],[16,12],[18,12],[20,12],[22,12],[24,12],[26,12],[28,12],[10,14],[12,14],[14,14],[16,14],[18,14],[20,14],[22,14],[24,14],[26,14],[28,14],[10,16],[12,16],[14,16],[16,16],[18,16],[20,16],[22,16],[24,16],[26,16],[28,16],[12,18],[14,18],[16,18],[18,18],[20,18],[22,18],[24,18],[26,18]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // White muzzle
-    ctx.fillStyle = '#F5E6D3';
-    for (let [x,y] of [[14,18],[16,18],[18,18],[20,18],[22,18],[24,18],[16,20],[18,20],[20,20],[22,20]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // Ears (floppy, brown outside, pink inside)
+    ctx.fillRect(ox + 16, oy + 112, 12, 8);
+    ctx.fillRect(ox + 52, oy + 112, 12, 8);
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 4, oy + 88, 12, 24);
+    ctx.fillRect(ox + 64, oy + 88, 12, 24);
     ctx.fillStyle = '#8B5E3C';
-    for (let [x,y] of [[8,4],[10,4],[8,6],[10,6],[8,8],[10,8],[8,10],[10,10]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    for (let [x,y] of [[28,4],[30,4],[28,6],[30,6],[28,8],[30,8],[28,10],[30,10]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    ctx.fillStyle = '#E8A0A0';
-    for (let [x,y] of [[10,6],[10,8]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    for (let [x,y] of [[28,6],[28,8]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // Eyes
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(14*P, 12*P, 3*P, 3*P);
-    ctx.fillRect(23*P, 12*P, 3*P, 3*P);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(15*P, 12*P, P, P);
-    ctx.fillRect(24*P, 12*P, P, P);
-    
-    // Nose
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(18*P, 16*P, 4*P, 2*P);
-    
-    // Mouth
-    if (expr === 'love') {
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(17*P, 19*P, P, P);
-      ctx.fillRect(22*P, 19*P, P, P);
-      ctx.fillRect(18*P, 20*P, 4*P, P);
-    } else if (expr === 'angry') {
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(18*P, 20*P, 4*P, P);
-      ctx.fillRect(17*P, 19*P, P, P);
-      ctx.fillRect(22*P, 19*P, P, P);
+    ctx.fillRect(ox + 4, oy + 108, 12, 8);
+    ctx.fillRect(ox + 64, oy + 108, 12, 8);
+
+    // -- tail --
+    ctx.fillStyle = '#8B5E3C';
+    const tailY = oy + 48 + Math.sin(tailWag * 0.15) * 3;
+    ctx.fillRect(ox + 64, tailY, 8, 20);
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 64, tailY, 8, 8);
+
+    // -- head --
+    ctx.fillStyle = '#8B5E3C';
+    const headY = oy + 20 + earBounce;
+    ctx.fillRect(ox + 16, headY, 48, 40);
+
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ox + 24, headY + 6, 8, 26);
+    ctx.fillRect(ox + 48, headY + 6, 8, 26);
+    ctx.fillRect(ox + 32, headY + 22, 16, 14);
+
+    // -- ears --
+    ctx.fillStyle = '#6B3F23';
+    const earWag = Math.sin(earBounce * 0.1) * 2;
+    ctx.fillRect(ox + 8, headY + earWag, 12, 28);
+    ctx.fillRect(ox + 60, headY - earWag, 12, 28);
+
+    // -- eyes --
+    if (isLove) {
+      // heart eyes
+      ctx.fillStyle = '#e94560';
+      ctx.fillRect(ox + 28, headY + 12, 8, 8);
+      ctx.fillRect(ox + 44, headY + 12, 8, 8);
+      ctx.fillStyle = '#ff8090';
+      ctx.fillRect(ox + 32, headY + 12, 4, 4);
+      ctx.fillRect(ox + 48, headY + 12, 4, 4);
+    } else if (isAngry) {
+      // angry eyes
+      ctx.fillStyle = '#111';
+      ctx.fillRect(ox + 28, headY + 12, 8, 6);
+      ctx.fillRect(ox + 44, headY + 12, 8, 6);
+      ctx.fillStyle = '#e94560';
+      ctx.fillRect(ox + 30, headY + 12, 4, 4);
+      ctx.fillRect(ox + 46, headY + 12, 4, 4);
     } else {
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(17*P, 19*P, P, P);
-      ctx.fillRect(22*P, 19*P, P, P);
-      ctx.fillRect(18*P, 20*P, 2*P, P);
-      ctx.fillRect(20*P, 20*P, 2*P, P);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(ox + 28, headY + 12, 8, 8);
+      ctx.fillRect(ox + 44, headY + 12, 8, 8);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(ox + 32, headY + 12, 4, 4);
+      ctx.fillRect(ox + 48, headY + 12, 4, 4);
     }
-    
-    // Legs
-    ctx.fillStyle = '#8B5E3C';
-    for (let [x,y] of [[12,30],[14,30],[24,30],[26,30],[12,32],[14,32],[24,32],[26,32]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    ctx.fillStyle = '#F5E6D3';
-    for (let [x,y] of [[12,34],[14,34],[24,34],[26,34]]) {
-      ctx.fillRect(x*P, y*P, P, P);
-    }
-    
-    // Tail (wagging)
-    ctx.fillStyle = '#8B5E3C';
-    const tailX = 34;
-    if (expr === 'love') {
-      for (let [x,y] of [[34,20],[36,18],[36,20]]) {
-        ctx.fillRect(x*P, y*P, P, P);
-      }
+
+    // -- nose --
+    ctx.fillStyle = '#111';
+    ctx.fillRect(ox + 36, headY + 22, 10, 6);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(ox + 40, headY + 22, 4, 2);
+
+    // -- mouth --
+    ctx.fillStyle = '#5a3020';
+    if (isLove) {
+      ctx.fillRect(ox + 36, headY + 32, 10, 4);
+      ctx.fillRect(ox + 34, headY + 30, 4, 4);
+      ctx.fillRect(ox + 44, headY + 30, 4, 4);
+    } else if (isAngry) {
+      ctx.fillRect(ox + 34, headY + 30, 14, 4);
     } else {
-      for (let [x,y] of [[34,18],[36,18],[34,20]]) {
-        ctx.fillRect(x*P, y*P, P, P);
-      }
+      ctx.fillRect(ox + 36, headY + 32, 10, 4);
+    }
+
+    // -- collar --
+    ctx.fillStyle = '#e94560';
+    ctx.fillRect(ox + 16, headY + 36, 48, 4);
+    ctx.fillStyle = '#f5c518';
+    ctx.fillRect(ox + 36, headY + 40, 8, 8);
+
+    // love hearts
+    if (isLove && loveTimer > 0) {
+      ctx.fillStyle = '#e94560';
+      const hx = ox + 36;
+      const hy = headY - 12 - loveTimer;
+      ctx.fillRect(hx, hy, 4, 4);
+      ctx.fillRect(hx + 4, hy - 4, 4, 4);
+      ctx.fillRect(hx + 8, hy, 4, 4);
+      ctx.fillRect(hx + 4, hy, 4, 4);
+      ctx.fillRect(hx + 4, hy + 4, 4, 4);
     }
   }
-  
-  drawBeagle('idle');
-  
+
   function setBunny(expression, text) {
     var beagle = document.getElementById('beagle');
     var bubble = document.getElementById('bubble');
     beagle.className = expression;
-    drawBeagle(expression);
+    isLove = (expression === 'love');
+    isAngry = (expression === 'angry');
+    if (isLove) loveTimer = 8;
     if (text && text.length > 0) {
       bubble.textContent = text;
       bubble.className = 'show';
@@ -183,6 +203,16 @@
       bubble.className = '';
     }
   }
+
+  function loop() {
+    tailWag++;
+    earBounce = Math.sin(tailWag * 0.08) * 2;
+    bounceOffset = Math.abs(Math.sin(tailWag * 0.05)) * 1;
+    if (loveTimer > 0) loveTimer -= 0.1;
+    drawBeagle(6, 8);
+    requestAnimationFrame(loop);
+  }
+  loop();
 </script>
 </body>
 </html>
