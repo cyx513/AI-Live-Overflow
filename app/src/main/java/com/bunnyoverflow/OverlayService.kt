@@ -240,8 +240,82 @@ class OverlayService : Service() {
         }, 3600_000L)
     }
 
+    // -- Screenshot Detection --
+    private var screenshotObserver: FileObserver? = null
+    private fun startScreenshotObserver() {
+        val paths = listOf(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).resolve("Screenshots"),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).resolve("Screenshots"),
+            File("/storage/emulated/0/Pictures/Screenshots"),
+            File("/storage/emulated/0/DCIM/Screenshots")
+        )
+        for (dir in paths) {
+            if (!dir.exists()) continue
+            val observer = object : FileObserver(dir, CREATE or MOVED_TO) {
+                override fun onEvent(event: Int, path: String?) {
+                    if (path != null && (path.endsWith(".png") || path.endsWith(".jpg"))) {
+                        mainHandler.post { onScreenshot() }
+                    }
+                }
+            }
+            observer.startWatching()
+            screenshotObserver = observer
+            break
+        }
+    }
+    private fun onScreenshot() {
+        val reactions = arrayOf(
+            "angry" to arrayOf("谁在偷拍？！", "汪！不许截图！", "嗷！删掉！"),
+            "blink" to arrayOf("嗯？你截了什么", "汪？什么东西闪了一下")
+        )
+        val (expr, bubbles) = reactions.random()
+        updateBunny(expr, bubbles.random())
+    }
+
+    // -- App Detection --
+    private var lastForegroundApp = ""
+    private fun startAppTracking() {
+        CoroutineScope(Dispatchers.IO).launch {
+            while (polling) {
+                try {
+                    val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+                    val now = System.currentTimeMillis()
+                    val events = usm.queryEvents(now - 5000, now)
+                    val event = UsageEvents.Event()
+                    var current = ""
+                    while (events.hasNextEvent()) {
+                        events.getNextEvent(event)
+                        if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+                            current = event.packageName
+                        }
+                    }
+                    if (current.isNotEmpty() && current != lastForegroundApp && current != packageName) {
+                        lastForegroundApp = current
+                        withContext(Dispatchers.Main) { onAppChanged(current) }
+                    }
+                } catch (_: Exception) {}
+                delay(3000)
+            }
+        }
+    }
+    private fun onAppChanged(pkg: String) {
+        val (expr, bubble) = when {
+            pkg.contains("xhs") -> "talk" to "汪！又在看小红书"
+            pkg.contains("ugc.aweme") -> "follow" to "嗷！抖音！我也要看"
+            pkg.contains("tencent.mm") -> "idle" to "微信啊……有人找你吗"
+            pkg.contains("tencent.mobileqq") -> "idle" to "QQ？这年头还有人用"
+            pkg.contains("deepseek") -> "angry" to "汪！不许找别的AI！"
+            pkg.contains("larus.nova") -> "angry" to "豆包？！比格犬生气了"
+            pkg.contains("meituan") -> "love" to "嗷！要点外卖吗！"
+            pkg.contains("gallery") || pkg.contains("photos") -> "blink" to "在看照片？有我好看吗"
+            else -> "talk" to "汪？换app了"
+        }
+        updateBunny(expr, bubble)
+    }
+
     override fun onDestroy() {
         polling = false
+        screenshotObserver?.stopWatching()
         windowManager.removeView(webView)
         webView.destroy()
         super.onDestroy()
