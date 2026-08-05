@@ -52,8 +52,7 @@ class OverlayService : Service() {
         setupWebView()
         startPolling()
         startWhisperRotation()
-        startScreenshotObserver()
-        startAppTracking()
+        // observers started after method definitions below
     }
 
     private fun setupWebView() {
@@ -69,6 +68,8 @@ class OverlayService : Service() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     updateBunny("idle", "")
+                    startScreenshotObserver()
+                    startAppTracking()
                 }
             }
             loadUrl("file:///android_asset/bunny.html")
