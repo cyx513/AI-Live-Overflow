@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bunny Overflow</title>
+<title>Beagle Overflow</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -14,18 +14,19 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    font-family: sans-serif;
+    font-family: 'Courier New', monospace;
   }
-  #bunny {
+  #beagle {
     width: 120px; height: 120px;
+    image-rendering: pixelated;
     transition: transform 0.3s ease;
   }
-  #bunny.idle { transform: scale(1); }
-  #bunny.blink { animation: blink 0.3s ease; }
-  #bunny.love { transform: scale(1.2); }
-  #bunny.angry { animation: shake 0.5s ease; }
-  #bunny.talk { animation: bounce 0.6s ease; }
-  #bunny.follow { transform: scale(1.05) rotate(-5deg); }
+  #beagle.idle { transform: scale(1); }
+  #beagle.blink { animation: blink 0.3s ease; }
+  #beagle.love { transform: scale(1.2); }
+  #beagle.angry { animation: shake 0.5s ease; }
+  #beagle.talk { animation: bounce 0.6s ease; }
+  #beagle.follow { transform: scale(1.05) rotate(-5deg); }
   #bubble {
     max-width: 160px;
     background: rgba(255,255,255,0.92);
@@ -58,33 +59,120 @@
 </style>
 </head>
 <body>
-<svg id="bunny" class="idle" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-  <!-- ears -->
-  <ellipse cx="35" cy="20" rx="12" ry="28" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
-  <ellipse cx="85" cy="20" rx="12" ry="28" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
-  <ellipse cx="35" cy="22" rx="7" ry="20" fill="#fce4d6"/>
-  <ellipse cx="85" cy="22" rx="7" ry="20" fill="#fce4d6"/>
-  <!-- face -->
-  <circle cx="60" cy="65" r="35" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
-  <!-- eyes -->
-  <circle cx="47" cy="58" r="6" fill="#5c4033"/>
-  <circle cx="73" cy="58" r="6" fill="#5c4033"/>
-  <circle cx="49" cy="56" r="2" fill="white"/>
-  <circle cx="75" cy="56" r="2" fill="white"/>
-  <!-- nose -->
-  <ellipse cx="60" cy="68" rx="5" ry="3.5" fill="#e8a0a0"/>
-  <!-- mouth -->
-  <path d="M54 74 Q60 80 66 74" fill="none" stroke="#5c4033" stroke-width="1.8" stroke-linecap="round"/>
-  <!-- blush -->
-  <circle cx="38" cy="68" r="7" fill="#ffd4d4" opacity="0.6"/>
-  <circle cx="82" cy="68" r="7" fill="#ffd4d4" opacity="0.6"/>
-</svg>
+<canvas id="beagle" class="idle" width="40" height="40"></canvas>
 <div id="bubble"></div>
 <script>
+  // Pixel beagle - 40x40 canvas
+  const canvas = document.getElementById('beagle');
+  const ctx = canvas.getContext('2d');
+  const P = 2; // pixel size
+  
+  function drawBeagle(expr) {
+    ctx.clearRect(0, 0, 40, 40);
+    ctx.imageSmoothingEnabled = false;
+    
+    // Body (brown)
+    ctx.fillStyle = '#8B5E3C';
+    for (let [x,y] of [[6,22],[8,22],[10,22],[12,22],[14,22],[16,22],[18,22],[20,22],[22,22],[24,22],[26,22],[28,22],[30,22],[32,22],[6,24],[8,24],[10,24],[12,24],[14,24],[16,24],[18,24],[20,24],[22,24],[24,24],[26,24],[28,24],[30,24],[32,24],[8,26],[10,26],[12,26],[14,26],[16,26],[18,26],[20,26],[22,26],[24,26],[26,26],[28,26],[30,26],[10,28],[12,28],[14,28],[16,28],[18,28],[20,28],[22,28],[24,28],[26,28],[28,28]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // White belly
+    ctx.fillStyle = '#F5E6D3';
+    for (let [x,y] of [[14,24],[16,24],[18,24],[20,24],[22,24],[24,24],[14,26],[16,26],[18,26],[20,26],[22,26],[24,26]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // Head (brown)
+    ctx.fillStyle = '#8B5E3C';
+    for (let [x,y] of [[12,10],[14,10],[16,10],[18,10],[20,10],[22,10],[24,10],[26,10],[10,12],[12,12],[14,12],[16,12],[18,12],[20,12],[22,12],[24,12],[26,12],[28,12],[10,14],[12,14],[14,14],[16,14],[18,14],[20,14],[22,14],[24,14],[26,14],[28,14],[10,16],[12,16],[14,16],[16,16],[18,16],[20,16],[22,16],[24,16],[26,16],[28,16],[12,18],[14,18],[16,18],[18,18],[20,18],[22,18],[24,18],[26,18]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // White muzzle
+    ctx.fillStyle = '#F5E6D3';
+    for (let [x,y] of [[14,18],[16,18],[18,18],[20,18],[22,18],[24,18],[16,20],[18,20],[20,20],[22,20]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // Ears (floppy, brown outside, pink inside)
+    ctx.fillStyle = '#8B5E3C';
+    for (let [x,y] of [[8,4],[10,4],[8,6],[10,6],[8,8],[10,8],[8,10],[10,10]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    for (let [x,y] of [[28,4],[30,4],[28,6],[30,6],[28,8],[30,8],[28,10],[30,10]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    ctx.fillStyle = '#E8A0A0';
+    for (let [x,y] of [[10,6],[10,8]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    for (let [x,y] of [[28,6],[28,8]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // Eyes
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(14*P, 12*P, 3*P, 3*P);
+    ctx.fillRect(23*P, 12*P, 3*P, 3*P);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(15*P, 12*P, P, P);
+    ctx.fillRect(24*P, 12*P, P, P);
+    
+    // Nose
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(18*P, 16*P, 4*P, 2*P);
+    
+    // Mouth
+    if (expr === 'love') {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(17*P, 19*P, P, P);
+      ctx.fillRect(22*P, 19*P, P, P);
+      ctx.fillRect(18*P, 20*P, 4*P, P);
+    } else if (expr === 'angry') {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(18*P, 20*P, 4*P, P);
+      ctx.fillRect(17*P, 19*P, P, P);
+      ctx.fillRect(22*P, 19*P, P, P);
+    } else {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(17*P, 19*P, P, P);
+      ctx.fillRect(22*P, 19*P, P, P);
+      ctx.fillRect(18*P, 20*P, 2*P, P);
+      ctx.fillRect(20*P, 20*P, 2*P, P);
+    }
+    
+    // Legs
+    ctx.fillStyle = '#8B5E3C';
+    for (let [x,y] of [[12,30],[14,30],[24,30],[26,30],[12,32],[14,32],[24,32],[26,32]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    ctx.fillStyle = '#F5E6D3';
+    for (let [x,y] of [[12,34],[14,34],[24,34],[26,34]]) {
+      ctx.fillRect(x*P, y*P, P, P);
+    }
+    
+    // Tail (wagging)
+    ctx.fillStyle = '#8B5E3C';
+    const tailX = 34;
+    if (expr === 'love') {
+      for (let [x,y] of [[34,20],[36,18],[36,20]]) {
+        ctx.fillRect(x*P, y*P, P, P);
+      }
+    } else {
+      for (let [x,y] of [[34,18],[36,18],[34,20]]) {
+        ctx.fillRect(x*P, y*P, P, P);
+      }
+    }
+  }
+  
+  drawBeagle('idle');
+  
   function setBunny(expression, text) {
-    var bunny = document.getElementById('bunny');
+    var beagle = document.getElementById('beagle');
     var bubble = document.getElementById('bubble');
-    bunny.className = expression;
+    beagle.className = expression;
+    drawBeagle(expression);
     if (text && text.length > 0) {
       bubble.textContent = text;
       bubble.className = 'show';
