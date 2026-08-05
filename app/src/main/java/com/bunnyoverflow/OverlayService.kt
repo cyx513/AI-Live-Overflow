@@ -125,7 +125,7 @@ class OverlayService : Service() {
 
     private fun onSingleTap() {
         val reactions = arrayOf("blink", "talk", "follow")
-        updateBunny(reactions.random(), "戓我干嘛")
+        updateBunny(reactions.random(), "戳我干嘛")
     }
 
     private fun onDoubleTap() {
@@ -133,7 +133,7 @@ class OverlayService : Service() {
     }
 
     private fun onMultiTap() {
-        updateBunny("angry", "别操了！再操咯你")
+        updateBunny("angry", "别戳了！再戳咬你")
     }
 
     private fun updateBunny(expression: String, bubble: String) {
@@ -188,7 +188,7 @@ class OverlayService : Service() {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, "bunny_overflow")
                 .setContentTitle("🐾 Bunny Overflow")
-                .setContentText("充毛嵰在你的屏幕上")
+                .setContentText("比格犬在你的屏幕上")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -196,7 +196,7 @@ class OverlayService : Service() {
         } else {
             Notification.Builder(this)
                 .setContentTitle("🐾 Bunny Overflow")
-                .setContentText("充毛嵰在你的屏幕上")
+                .setContentText("比格犬在你的屏幕上")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
