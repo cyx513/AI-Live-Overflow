@@ -280,7 +280,7 @@ class OverlayService : Service() {
                 try {
                     val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
                     val now = System.currentTimeMillis()
-                    val events = usm.queryEvents(now - 5000, now)
+                    val events = usm.queryEvents(now - 10000, now)
                     val event = UsageEvents.Event()
                     var current = ""
                     while (events.hasNextEvent()) {
@@ -294,7 +294,7 @@ class OverlayService : Service() {
                         withContext(Dispatchers.Main) { onAppChanged(current) }
                     }
                 } catch (_: Exception) {}
-                delay(3000)
+                delay(5000)
             }
         }
     }
